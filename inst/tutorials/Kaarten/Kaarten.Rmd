@@ -1,0 +1,479 @@
+---
+title: "Tutorial Kaarten"
+author: Martine Jansen @nnie_nl   
+output: 
+  learnr::tutorial:
+    language: 
+      en:
+        button:
+          previoustopic: Terug
+          nexttopic: Verder
+          hintnext: Volgende hint
+          hintprev: Vorige Hint
+          solution: Oplossing
+          startover: Opnieuw!
+        text:
+          startover: Opnieuw!
+          areyousure: Weet je zeker dat je alles opnieuw wil doen? Alles wordt dan gereset.
+          blank: invulveld
+          blank_plural: invulvelden
+          exercisecontainsblank: Deze opdracht bevat {{count}} $t(text.blank).
+          pleasereplaceblank: Vervang {{blank}} door correcte R code.
+          and: en
+    progressive: true
+    allow_skip: true
+    theme: "united"  
+runtime: shiny_prerendered
+
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(sf)
+
+dPrognose <- read_csv("11-leerlingenprognose-vo-vestiging-2016-2041.csv")
+dPrognoseHavo21_26 <- dPrognose %>%
+  mutate(pc2 = str_sub(VEST_PC,start = 1, end = 2)) %>%
+  select(pc2, HAVO_2021, HAVO_2026) %>%
+  pivot_longer(cols = -pc2, 
+               names_prefix = "HAVO_",
+               names_to = "jaar") %>%
+  count(pc2, jaar, wt = value) %>%
+  pivot_wider(names_from = jaar, values_from = n) %>%
+  mutate(groei = (`2026` - `2021`)/`2021`)
+
+```
+
+## Doel
+
+In deze tutorial gaan we stap voor stap deze afbeelding maken:
+
+```{r}
+library(spatialrisk)
+
+mijn_pc2 <- nl_postcode2 %>%
+  left_join(dPrognoseHavo21_26,
+            by = c(areaname = "pc2"))
+
+ggplot() +
+  geom_sf(data = mijn_pc2,
+          aes(fill = groei),
+          color = "grey") +
+  geom_sf(data = nl_provincie,
+          fill = NA) +
+  scale_fill_gradient2(labels = scales::percent_format(accuracy = 1)) +
+  theme_void() +
+  labs(title = "Groeiprognose Havo 2026 tov 2021",
+       caption = "Bron: DUO | Bewerking: IR")
+```
+
+
+
+
+```{r quiz1}
+quiz(
+  caption = NULL,
+  question(text = "Kunnen we het maken?",
+           answer("Uhm...."),
+           answer("Nope"),
+           answer("Nou en of!", correct = TRUE),
+           submit_button = "Check mijn antwoord",
+           correct = "Klopt helemaal!",
+           incorrect = "Nee, niet goed",
+           allow_retry = TRUE,
+           try_again_button= "Nog een poging"
+          )
+  )
+```
+
+
+## sf: simple features
+
+
+ISO standaard 19125-1:2004 volgens https://r-spatial.github.io/sf/articles/sf1.html:  
+
+*  hoe real world objects in de ruimte te representeren in computers
+*  hoe ze op te slaan in databases en weer op te halen
+*  welke geometrische bewerkingen er moeten zijn
+
+Een feature:  
+
+*  is een ding in de echte wereld, bv een stad
+*  kan bestaan uit andere dingen, bv straten
+*  kan deel uitmaken van een ander ding, bv land
+*  heeft
+  * een geometrie (punten, lijnen, polygonen) - beschrijving van waar ie is
+  * attributen - andere eigenschappen
+
+**`{sf}`** brengt dit naar **`R`**
+
+Deze tutorial heeft de packages al geladen  
+In een eigen project zet je deze libraries in de setup chunk:  
+
+```
+library(tidyverse)
+library(sf)
+```
+
+## Voorbeeld, en even spelen
+
+Run de code: 
+
+```{r voorbeeld, exercise =TRUE}
+# een simple features object inlezen
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+# en plotten
+ggplot() + 
+  geom_sf(data = nc)
+```
+
+Pas de onderstaande code aan zodat:  
+
+* de achtergrond minder druk is (weg is nog beter)
+* de vlakken en de lijnen een kleurtje krijgen
+
+```{r kaartnc, exercise = TRUE}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+ggplot() + 
+  geom_sf(data = nc,
+          fill = "______",
+          color = "______") +
+  theme_ ______
+```
+
+```{r kaartnc-hint-1}
+Vertaal kleuren naar het Engels
+```
+
+```{r kaartnc-hint-2}
+Haal de ____ weg bij theme en zet er weer een _ neer om de verschillende opties te zien
+```
+
+```{r kaartnc-solution}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+
+ggplot() + 
+  geom_sf(data = nc,
+          fill = "pink",
+          color = "purple") +
+  theme_void()
+```
+
+## Inhoud simple features object
+
+* Elke regel is een feature
+* De features hebben attributen (gewone columns)
+* En een geometrie ( een list column)
+
+```{r echo = TRUE}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+nc %>% head()
+```
+
+## Attributen kleuren de kaart
+
+* Attributen kun je gebruiken voor de kaart 
+* Vul de code aan en bekijk de kaart
+* Kies een ander attribuut voor de fill en bekijk opnieuw
+
+```{r fillkaartnc, exercise = TRUE}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+ggplot() + 
+  geom_sf(data = nc,
+          aes(fill = BIR74),
+          color = "_____") +
+  theme_ ______
+```
+
+```{r fillkaartnc-solution}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+ggplot() + 
+  geom_sf(data = nc,
+          aes(fill = BIR74),
+          color = "red") +
+  theme_void()
+```
+
+
+## Geometry in de listcolumn
+
+Inhoud van de listcolumn is
+
+*  een geometry
+*  elke rij een multipolygoon
+
+Bekijk er 1: 
+```{r multipol, echo=TRUE, exercise = TRUE}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+geo_nc1 <- nc %>% head(1) %>% pull(geometry)
+geo_nc1[[1]]
+
+```
+
+## Subkaart
+
+Object is een **dataset** *EN*  
+Datasets kun je **subsetten** *DUS*  
+Je kunt ook een **deel** van object **plotten**  
+
+Subsetten kun je doen door een beperking aan een attribuut op te leggen
+
+Bekijk de kolomnamen van `nc`: 
+```{r namennc, exercise = TRUE}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+names(___)
+
+```
+
+```{r namennc-solution}
+names(nc)
+```
+
+
+Maak een subset van nc en plot:    
+
+```{r subkaartnc, exercise = TRUE}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+nc_sub <- nc %>%
+  filter(______________)
+
+ggplot() + 
+  geom_sf(data = _______,
+          fill = "______",
+          color = "______") +
+  theme_ ______
+```
+
+```{r subkaartnc-hint}
+Je kunt bijvoorbeeld beperken tot de eerste 30, of beperken tot kleine gebieden
+```
+
+
+```{r subkaartnc-solution}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+nc_sub <- nc %>%
+  filter(AREA < 0.1)
+
+ggplot() + 
+  geom_sf(data = nc_sub,
+          fill = "pink",
+          color = "black") +
+  theme_void()
+```
+
+
+## Tekst toevoegen
+
+Soms is er meer nodig dan een kleur  
+Teksten in vakjes bijvoorbeeld  
+Pas de code aan zodat:
+
+*  alleen de counties met een nummer meer dan 2110 getoond worden
+*  met de namen van de county in het vakje
+
+```{r tekstnc, exercise = TRUE}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+nc_sub <- nc %>% ______________
+
+ggplot(data = ________) + 
+  geom_sf(fill = "__________",
+          color = "_________") +
+  geom_sf_text(aes(label = ________),
+               size = __, color = "______") +
+  theme_ _____
+```
+
+```{r tekstnc-solution}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"),
+                  quiet = TRUE)
+nc_sub <- nc %>% filter(CNTY_ID > 2110)
+
+ggplot(data = nc_sub) + 
+  geom_sf(fill = "antiquewhite",
+          color = "black") +
+  geom_sf_text(aes(label = NAME),
+               size = 3, color = "firebrick") +
+  theme_void()
+```
+
+
+## Nederland in beeld
+
+Nederland zit niet in **`{sf}`**  
+Fijn dat Martin Haringa [**`{spatialrisk}`**](https://cran.r-project.org/web/packages/spatialrisk/) heeft gemaakt  
+Run de onderstaande code
+
+```{r nl, echo = TRUE, fig.height = 3, exercise = TRUE}
+library(spatialrisk)
+
+ggplot() +
+  geom_sf(data = nl_provincie) +
+  theme_void()
+
+```
+
+Ontdek met bovenstaande code welke andere nl indelingen bestaan
+
+
+## Extra attributen toevoegen
+
+Bekijk hoe `spatialrisk::nl_postcode2` er uit ziet  
+
+
+```{r nlpc2, exercise = TRUE}
+library(spatialrisk)
+nl_postcode2
+```
+
+
+```{r quiz2}
+quiz(
+  caption = NULL,
+  question(text = "Hoeveel attributen zijn er?",
+           answer("0"),
+           answer("1"),
+           answer("2"),
+           answer("3", correct = TRUE),
+           answer("4"),
+           submit_button = "Check mijn antwoord",
+           correct = "Klopt helemaal!",
+           incorrect = "Nee, niet goed",
+           allow_retry = TRUE,
+           post_message = "De geometry list column telt niet als attribuut",
+           try_again_button= "Nog een poging"
+          )
+  )
+```
+
+
+We kunnen alleen maar plotten wat in de data zit  
+We maken obv de sf- data een nieuwe set met extra attributen  
+
+Bijvoorbeeld extra attribuut obv [leerlingenprognose van DUO](https://duo.nl/open_onderwijsdata/voortgezet-onderwijs/aantal-leerlingen/prognose-aantal-leerlingen.jsp)  
+Dit bestand is al beschikbaar voor de tutorial
+
+```{r, echo= TRUE, eval = FALSE}
+dPrognose <- read_csv("11-leerlingenprognose-vo-vestiging-2016-2041.csv")
+
+dPrognoseHavo21_26 <- dPrognose %>%
+  mutate(pc2 = str_sub(VEST_PC,start = 1, end = 2)) %>%
+  select(pc2, HAVO_2021, HAVO_2026) %>%
+  pivot_longer(cols = -pc2, 
+               names_prefix = "HAVO_",
+               names_to = "jaar") %>%
+  count(pc2, jaar, wt = value) %>%
+  pivot_wider(names_from = jaar, values_from = n) %>%
+  mutate(groei = (`2026` - `2021`)/`2021`)
+```
+
+Even kijken hoe het eruit ziet:  
+
+```{r proghavo, exercise = TRUE}
+dPrognoseHavo21_26
+```
+
+Nu maken we de nieuwe data set voor het kaartje:  
+
+```{r nljoin, exercise = TRUE}
+library(spatialrisk)
+
+mijn_pc2 <- nl_postcode2 %>%
+  left_join(dPrognoseHavo21_26,
+            by = c(areaname = "pc2"))
+
+mijn_pc2
+```
+
+## Kaart met nieuw attribuut
+
+Maak een kaart van Nederland:  
+
+* met de groei per pc2 als vlakvulling
+* bekijk de kaart
+* verbeter de kleuren (zie hint)
+* bekijk de kaart
+* voeg een titel en een bronvermelding toe (zie volgende hint)
+* bekijk de kaart
+* maak de lijnen van de pc2 gebieden lichter en voeg provincielijnen toe (zie oplossing)
+
+```{r eindresultaat, exercise = TRUE}
+library(spatialrisk)
+
+mijn_pc2 <- nl_postcode2 %>%
+  left_join(dPrognoseHavo21_26,
+            by = c(areaname = "pc2"))
+
+ggplot() +
+  geom_sf(data = _______,
+          aes(fill = ______)) +
+  theme_void()
+
+```
+
+
+```{r eindresultaat-hint-1}
+library(spatialrisk)
+
+mijn_pc2 <- nl_postcode2 %>%
+  left_join(dPrognoseHavo21_26,
+            by = c(areaname = "pc2"))
+
+ggplot() +
+  geom_sf(data = mijn_pc2,
+          aes(fill = groei)) +
+  scale_fill_gradient2(labels = scales::percent_format(accuracy = 1)) +
+  theme_void()
+
+```
+
+```{r eindresultaat-hint-2}
+library(spatialrisk)
+
+mijn_pc2 <- nl_postcode2 %>%
+  left_join(dPrognoseHavo21_26,
+            by = c(areaname = "pc2"))
+
+ggplot() +
+  geom_sf(data = mijn_pc2,
+          aes(fill = groei)) +
+  scale_fill_gradient2(labels = scales::percent_format(accuracy = 1)) +
+  theme_void() +
+  labs(title = "Groeiprognose Havo 2026 tov 2021",
+       caption = "Bron: DUO | Bewerking: IR")
+
+```
+
+
+```{r eindresultaat-solution}
+library(spatialrisk)
+
+mijn_pc2 <- nl_postcode2 %>%
+  left_join(dPrognoseHavo21_26,
+            by = c(areaname = "pc2"))
+
+ggplot() +
+  geom_sf(data = mijn_pc2,
+          aes(fill = groei),
+          color = "grey") +
+  geom_sf(data = nl_provincie,
+          fill = NA) +
+  scale_fill_gradient2(labels = scales::percent_format(accuracy = 1)) +
+  theme_void() +
+  labs(title = "Groeiprognose Havo 2026 tov 2021",
+       caption = "Bron: DUO | Bewerking: IR")
+
+```
