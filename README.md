@@ -2,7 +2,7 @@
 
 This is a very short tutorial on how to make maps. It is in Dutch. It helps you make maps like these:
 
-![](Example.png){width="192"}
+![](Example.png)
 
 ## Installation
 
